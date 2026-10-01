@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registro de candidatos</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js"></script>
+  </head>
+  <body>
+    <h1>Registro de Candidatos</h1>
+
+    <!-- CAIXA PRINCIPAL FLEX (Lado a Lado) -->
+    <div class="layout-principal">
+      <!-- COLUNA ESQUERDA: O Formulário de Preenchimento -->
+      <div class="coluna-esquerda">
+        <div class="form-group">
+          <label for="txtNumeroPartido">Número do Partido:</label>
+          <input
+            type="text"
+            id="txtNumeroPartido"
+            placeholder="Digite o número (ex: 91)"
+            onchange="processarPartido()"
+          />
+          <span id="msgErroPartido" class="erro"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Nome do Partido:</label>
+          <span id="lblNomePartido"><b>---</b></span>
+        </div>
+
+        <div class="form-group">
+          <label for="lstCandidatos">Candidato:</label>
+          <select id="lstCandidatos" size="5" onchange="selecionarCandidato()">
+            <!-- Opções populadas via JS -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="lstCargos">Cargo a Concorrer:</label>
+          <select id="lstCargos" size="5">
+            <option value="Presidente">Presidente</option>
+            <option value="Governador(a)">Governador(a)</option>
+            <option value="Senador(a)">Senador(a)</option>
+            <option value="Deputado(a) Federal">Deputado(a) Federal</option>
+            <option value="Deputado(a) Estadual">Deputado(a) Estadual</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="txtNumeroCandidato">Número do Candidato:</label>
+          <input
+            type="text"
+            id="txtNumeroCandidato"
+            placeholder="Informe o número do candidato"
+          />
+          <span class="rules">
+            Regras: XX - Presidente/Gov; XXn - Sen; XXnn - Dep. Fed.; XXnnn -
+            Dep. Est.</span
+          >
+          <span id="msgErroNumero" class="erro"></span>
+        </div>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn-primary"
+            onclick="registrarCandidatura()"
+          >
+            Registrar Candidatura
+          </button>
+          <button
+            type="button"
+            class="btn-success"
+            onclick="gravarEEnviarTSE()"
+          >
+            Gravar e Enviar ao TSE
+          </button>
+        </div>
+        <span id="msgFeedbackAcao"></span>
+      </div>
+
+      <!-- COLUNA DIREITA: O Painel do Personagem (Subiu para ficar ao lado do formulário) -->
+      <div class="coluna-direita">
+        <div id="painelCandidato" class="card-candidato" style="display: none">
+          <h3>Dados do Candidato Selecionado</h3>
+          <p><strong>Nome:</strong> <span id="infoNome">-</span></p>
+          <p><strong>Cargo:</strong> <span id="infoCargo">-</span></p>
+          <p><strong>Número:</strong> <span id="infoNumero">-</span></p>
+          <div>
+            <strong>Foto:</strong><br />
+            <img id="infoFoto" src="" alt="Foto do Candidato" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Fim da CAIXA PRINCIPAL -->
+
+    <hr />
+
+    <h3>Candidaturas Registradas (Aguardando Envio)</h3>
+    <ul id="listaRegistrados"></ul>
+
+    <!-- Lógica de programação (Mantida inalterada) -->
+    <script>
+      const registroCandidaturas = [];
+      let partidoAtual = "";
+      let nomePartidoAtual = "";
+
+      const mapPartidos = {
+        91: "PDisney",
+      };
+
+      async function processarPartido() {
+        const txtNumero = document.getElementById("txtNumeroPartido").value;
+        const msgErro = document.getElementById("msgErroPartido");
+        const lblNome = document.getElementById("lblNomePartido");
+        const lstCandidatos = document.getElementById("lstCandidatos");
+
+        if (mapPartidos[txtNumero]) {
+          nomePartidoAtual = mapPartidos[txtNumero];
+          msgErro.innerText = "";
+          partidoAtual = txtNumero;
+          lblNome.innerHTML = `<b>${nomePartidoAtual}</b>`;
+
+          await carregarCandidatos(nomePartidoAtual);
+
+          lstCandidatos.innerHTML = "";
+          candidatos.forEach((candidato, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.text = candidato.nome;
+            lstCandidatos.add(option);
+          });
+        } else {
+          msgErro.innerText = "Partido inválido. Tente 91 para PDisney.";
+          lblNome.innerHTML = "<b>---</b>";
+          lstCandidatos.innerHTML = "";
+        }
+      }
+
+      function selecionarCandidato() {
+        const lstCandidatos = document.getElementById("lstCandidatos");
+        const index = lstCandidatos.value;
+
+        if (index !== "") {
+          const candidato = candidatos[index];
+          document.getElementById("painelCandidato").style.display = "block";
+          document.getElementById("infoNome").innerText = candidato.nome;
+          document.getElementById("infoFoto").src = candidato.foto;
+
+          document.getElementById("lstCargos").selectedIndex = -1;
+          document.getElementById("txtNumeroCandidato").value = "";
+          document.getElementById("infoCargo").innerText = "-";
+          document.getElementById("infoNumero").innerText = "-";
+        }
+      }
+
+      function registrarCandidatura() {
+        const candidatoIndex = document.getElementById("lstCandidatos").value;
+        const cargo = document.getElementById("lstCargos").value;
+        const numero = document
+          .getElementById("txtNumeroCandidato")
+          .value.trim();
+        const msgErro = document.getElementById("msgErroNumero");
+        const msgFeedback = document.getElementById("msgFeedbackAcao");
+
+        msgErro.innerText = "";
+        msgFeedback.innerText = "";
+        msgFeedback.className = "";
+
+        if (!candidatoIndex || !cargo || !numero) {
+          msgErro.innerText =
+            "Preencha candidato, cargo e número antes de registrar.";
+          return;
+        }
+
+        const candidatoSelecionado = candidatos[candidatoIndex];
+
+        const jaRegistrado = registroCandidaturas.find(
+          (c) => c.nome === candidatoSelecionado.nome,
+        );
+        if (jaRegistrado) {
+          msgErro.innerText =
+            "Operação bloqueada: Este candidato já foi indicado para um cargo eletivo.";
+          return;
+        }
+
+        const vagas = {
+          Presidente: 1,
+          "Governador(a)": 1,
+          "Senador(a)": 2,
+          "Deputado(a) Federal": Infinity,
+          "Deputado(a) Estadual": Infinity,
+        };
+        const quantidadeRegistrada = registroCandidaturas.filter(
+          (c) => c.cargo === cargo,
+        ).length;
+
+        if (quantidadeRegistrada >= vagas[cargo]) {
+          msgErro.innerText = `O limite de vagas para ${cargo} foi atingido.`;
+          return;
+        }
+
+        if (!validarNumeroCandidato(numero, cargo, partidoAtual)) {
+          msgErro.innerText =
+            "A numeração inserida não segue a regra para este cargo ou partido.";
+          return;
+        }
+
+        registroCandidaturas.push({
+          nome: candidatoSelecionado.nome,
+          foto: candidatoSelecionado.foto,
+          cargo: cargo,
+          numero: numero,
+        });
+
+        document.getElementById("infoCargo").innerText = cargo;
+        document.getElementById("infoNumero").innerText = numero;
+
+        atualizarExibicaoLista();
+
+        msgFeedback.innerText = "Candidatura registrada na chapa com sucesso!";
+        msgFeedback.className = "sucesso";
+      }
+
+      function atualizarExibicaoLista() {
+        const lista = document.getElementById("listaRegistrados");
+        lista.innerHTML = "";
+        registroCandidaturas.forEach((c) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<strong>${c.nome}</strong> - ${c.cargo} (Nº: ${c.numero})`;
+          lista.appendChild(li);
+        });
+      }
+
+      function gravarEEnviarTSE() {
+        const msgFeedback = document.getElementById("msgFeedbackAcao");
+        msgFeedback.className = "";
+
+        if (registroCandidaturas.length === 0) {
+          msgFeedback.innerText =
+            "Nenhuma candidatura foi registrada para ser enviada.";
+          msgFeedback.className = "erro";
+          return;
+        }
+
+        const payloadJson = JSON.stringify(registroCandidaturas, null, 2);
+        const blob = new Blob([payloadJson], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const linkDownload = document.createElement("a");
+        linkDownload.href = url;
+        linkDownload.download = `${nomePartidoAtual}.json`;
+        document.body.appendChild(linkDownload);
+        linkDownload.click();
+
+        document.body.removeChild(linkDownload);
+        URL.revokeObjectURL(url);
+
+        registroCandidaturas.length = 0;
+        atualizarExibicaoLista();
+        document.getElementById("painelCandidato").style.display = "none";
+        document.getElementById("lstCandidatos").innerHTML = "";
+        document.getElementById("txtNumeroCandidato").value = "";
+        document.getElementById("lstCargos").selectedIndex = -1;
+
+        msgFeedback.innerText =
+          "O arquivo final PDisney.json foi gravado e gerado com sucesso!";
+        msgFeedback.className = "sucesso";
+      }
+    </script>
+  </body>
+</html>
